@@ -1,7 +1,0 @@
-RewriteEngine On
-RewriteBase /
-RewriteRule ^login ?1=login
-RewriteRule ^logout var/logout.php
-RewriteRule ^privacy ?1=privacy
-RewriteRule ^profile ?1=profile
-RewriteRule ^links ?1=links

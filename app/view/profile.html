@@ -1,0 +1,392 @@
+<?php include 'header.html'; ?>
+<div class="container">
+    <h1>用户资料</h1>
+    <div class="row">
+        <div class="col-md-2">
+            <img style="border-radius: 50%;" class="mx-auto d-block" src="<?php echo 'https://cravatar.cn/avatar/'.md5(strtolower(trim($email))).'?d=mp&s=100'; ?>" />
+            <div class="text-center" style="font-size: 1.75em;"><?php if(session('nickname') != ''){echo session('nickname');}else{echo session('username');} ?></div>
+            <div class="text-center" style="font-size: 1.25em;"><?php if(session('nickname') != ''){echo session('username');} ?></div>
+        </div>
+        <div class="col-md-10">
+            <div class="accordion" id="profile">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" data-bs-toggle="collapse" data-bs-target="#user">资料设置</button>
+                    </h2>
+                    <div id="user" class="accordion-collapse collapse show" data-bs-parent="#profile">
+                        <div class="accordion-body">
+                            <label class="form-label">头像</label>
+                            <div class="form-text">在<a href="https://gravatar.com/" target="_blank">Gravatar</a>或<a href="https://cravatar.cn/" target="_blank">Cravatar</a>通过您的<a href="#email_input">电子邮箱</a>设置头像。</div>
+                            <hr>
+                            <form id="user_form" novalidate>
+                                <label for="username_input" class="form-label">用户名</label>
+                                <input type="text" class="form-control" id="username_input" name="username" value="<?php echo session('username'); ?>" required onkeyup="validateUsername()" />
+                                <div class="form-text" id="username_feedback">仅支持英文字母、数字和下划线，长度为4至16个字符。</div>
+                                <label for="email_input" class="form-label">电子邮箱</label>
+                                <input type="email" name="email" id="email_input" class="form-control" value="<?php echo $email; ?>" onkeyup="validateEmail()" />
+                                <div id="email_feedback" class="form-text">最长128个字符。</div>
+                                <label for="nickname_input" class="form-label">昵称</label>
+                                <input type="text" name="nickname" id="nickname_input" class="form-control" value="<?php echo session('nickname'); ?>" onkeyup="validateNickname()" />
+                                <div id="nickname_feedback" class="form-text">最长32个字符。</div>
+                                <label for="bio_input">简介</label>
+                                <textarea name="bio" id="bio_input" rows="5" class="form-control" onkeyup="validateBio()"><?php echo $bio; ?></textarea>
+                                <div id="bio_feedback" class="form-text">最长255个字符。</div>
+                                <button type="button" class="btn btn-primary" id="user_button" onclick="saveProfile()"><span id="user_spinner" class="spinner-border-sm"></span>保存</button>
+                            </form>
+                            <hr>
+                            <form id="password_form" novalidate>
+                                <label for="old_password_input" class="form-label">旧密码</label>
+                                <input type="password" class="form-control" id="old_password_input" name="old_password" required onkeyup="validateOldPassword()" />
+                                <div class="form-text" id="old_password_feedback">长度为6至18个字符。</div>
+                                <label for="new_password_input" class="form-label">新密码</label>
+                                <input type="password" class="form-control" id="new_password_input" name="new_password" required onkeyup="validateNewPassword()" />
+                                <div class="form-text" id="new_password_feedback">长度为6至18个字符。</div>
+                                <button type="button" class="btn btn-primary" id="password_button" onclick="changePassword()"><span id="password_spinner" class="spinner-border-sm"></span>修改密码</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#token">登录令牌</button>
+                    </h2>
+                    <div id="token" class="accordion-collapse collapse" data-bs-parent="#profile">
+                        <div class="accordion-body">
+                            <label class="form-label">令牌列表</label>
+                            <div class="form-text">只有选择“保持登录状态”的会话才会授予令牌。</div>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>UUID</th>
+                                            <th>登录IP</th>
+                                            <th>用户代理</th>
+                                            <th>登录时间</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(token, index) in tokens" v-bind:key="token.uuid">
+                                            <td v-text="uuidFilter(token.uuid)"></td>
+                                            <td v-text="token.login_ip"></td>
+                                            <td v-text="token.user_agent"></td>
+                                            <td v-text="token.login_time"></td>
+                                            <td><button type="button" class="btn btn-danger btn-sm" v-on:click="deleteOne(index, $event)"><span class="spinner-border-sm"></span>吊销</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="btn btn-danger" v-on:click="deleteAll($event)"><span class="spinner-border-sm"></span>全部吊销</button>
+                            <button type="button" class="btn btn-outline-secondary ms-1" v-on:click="filtUuid = !filtUuid">显示/隐藏UUID</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-muted text-end" style="font-size: 0.75em;">注册时间：<?php echo $register_time; ?></div>            
+        </div>
+    </div>
+</div>
+<div class="toast-container position-fixed bottom-0 start-50 translate-middle-x m-3">
+    <div class="toast bg-success text-white border-0 mt-3 mb-0" id="success_toast">
+        <div class="d-flex">
+            <div class="toast-body"><i class="bi bi-check-circle-fill me-1"></i>操作成功！</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+    <div class="toast bg-danger text-white border-0 mt-3 mb-0" id="network_toast">
+        <div class="d-flex">
+            <div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-1"></i>网络异常：请重试。</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+<script>
+    const uid = <?php echo session('uid'); ?>;
+    
+    var usernameInput = document.getElementById('username_input');
+    var usernameFeedback = document.getElementById('username_feedback');
+    var emailInput = document.getElementById('email_input');
+    var emailFeedback = document.getElementById('email_feedback');
+    var nicknameInput = document.getElementById("nickname_input");
+    var nicknameFeedback = document.getElementById("nickname_feedback");
+    var bioInput = document.getElementById("bio_input");
+    var bioFeedback = document.getElementById("bio_feedback");
+    var oldPasswordInput = document.getElementById('old_password_input');
+    var oldPasswordFeedback = document.getElementById('old_password_feedback');
+    var newPasswordInput = document.getElementById('new_password_input');
+    var newPasswordFeedback = document.getElementById('new_password_feedback');
+    
+    function validateUsername(){
+        var regex = /^[a-zA-Z0-9_]{4,16}$/;
+        usernameFeedback.innerHTML = '仅支持英文字母、数字和下划线，长度为4至16个字符。';
+        if(regex.test(usernameInput.value)){
+            usernameInput.classList.add('is-valid');
+            usernameInput.classList.remove('is-invalid');
+            usernameFeedback.classList.add('valid-feedback');
+            usernameFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            usernameInput.classList.add('is-invalid');
+            usernameInput.classList.remove('is-valid');
+            usernameFeedback.classList.add('invalid-feedback');
+            usernameFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+    
+    function validateEmail(){
+        var regex = /^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/;
+        if(regex.test(emailInput.value) && emailInput.value.length<=128){
+            emailInput.classList.add('is-valid');
+            emailInput.classList.remove('is-invalid');
+            emailFeedback.classList.add('valid-feedback');
+            emailFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            emailInput.classList.add('is-invalid');
+            emailInput.classList.remove('is-valid');
+            emailFeedback.classList.add('invalid-feedback');
+            emailFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+    
+    function validateNickname(){
+        if(nicknameInput.value.length<=32){
+            nicknameInput.classList.add('is-valid');
+            nicknameInput.classList.remove('is-invalid');
+            nicknameFeedback.classList.add('valid-feedback');
+            nicknameFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            nicknameInput.classList.add('is-invalid');
+            nicknameInput.classList.remove('is-valid');
+            nicknameFeedback.classList.add('invalid-feedback');
+            nicknameFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+    
+    function validateBio(){
+        if(bioInput.value.length<=255){
+            bioInput.classList.add('is-valid');
+            bioInput.classList.remove('is-invalid');
+            bioFeedback.classList.add('valid-feedback');
+            bioFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            bioInput.classList.add('is-invalid');
+            bioInput.classList.remove('is-valid');
+            bioFeedback.classList.add('invalid-feedback');
+            bioFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+    
+    function validateOldPassword(){
+        oldPasswordFeedback.innerHTML = '长度为6至18个字符。';
+        if(oldPasswordInput.value.length>=6 && oldPasswordInput.value.length<=18){
+            oldPasswordInput.classList.add('is-valid');
+            oldPasswordInput.classList.remove('is-invalid');
+            oldPasswordFeedback.classList.add('valid-feedback');
+            oldPasswordFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            oldPasswordInput.classList.add('is-invalid');
+            oldPasswordInput.classList.remove('is-valid');
+            oldPasswordFeedback.classList.add('invalid-feedback');
+            oldPasswordFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+
+    function validateNewPassword(){
+        if(newPasswordInput.value.length>=6 && newPasswordInput.value.length<=18){
+            newPasswordInput.classList.add('is-valid');
+            newPasswordInput.classList.remove('is-invalid');
+            newPasswordFeedback.classList.add('valid-feedback');
+            newPasswordFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            newPasswordInput.classList.add('is-invalid');
+            newPasswordInput.classList.remove('is-valid');
+            newPasswordFeedback.classList.add('invalid-feedback');
+            newPasswordFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+    
+    function saveProfile(){
+        if(validateUsername() && validateEmail() && validateNickname() && validateBio()){
+            document.getElementById('user_button').disabled = true;
+            document.getElementById('user_spinner').classList.add('spinner-border');
+            axios.put('/user/'+uid, {
+                username: usernameInput.value,
+                email: emailInput.value,
+                nickname: nicknameInput.value,
+                bio: bioInput.value
+            }).then(function(response){
+                (new bootstrap.Toast(document.getElementById('success_toast'))).show();
+                setTimeout(function(){location.reload();}, 1000);
+            }).catch(function(error){
+                switch (error.response.status){
+                    case 422:
+                        switch(error.response.data.message){
+                            case 'USERNAME_INVALID':
+                                usernameInput.classList.add('is-invalid');
+                                usernameInput.classList.remove('is-valid');
+                                usernameFeedback.classList.add('invalid-feedback');
+                                usernameFeedback.classList.remove('valid-feedback');
+                                break;
+                            case 'EMAIL_INVALID':
+                                emailInput.classList.add('is-invalid');
+                                emailInput.classList.remove('is-valid');
+                                emailFeedback.classList.add('invalid-feedback');
+                                emailFeedback.classList.remove('valid-feedback');
+                                break;
+                            case 'NICKNAME_INVALID':
+                                nicknameInput.classList.add('is-invalid');
+                                nicknameInput.classList.remove('is-valid');
+                                nicknameFeedback.classList.add('invalid-feedback');
+                                nicknameFeedback.classList.remove('valid-feedback');
+                                break;
+                            case 'BIO_INVALID':
+                                bioInput.classList.add('is-invalid');
+                                bioInput.classList.remove('is-valid');
+                                bioFeedback.classList.add('invalid-feedback');
+                                bioFeedback.classList.remove('valid-feedback');
+                                break;
+                        }
+                        break;
+                    case 409:
+                        usernameFeedback.innerHTML = '用户名被占用：请尝试其它用户名或维持原状。';
+                        usernameInput.classList.add('is-invalid');
+                        usernameInput.classList.remove('is-valid');
+                        usernameFeedback.classList.add('invalid-feedback');
+                        usernameFeedback.classList.remove('valid-feedback');
+                        break;
+                    default:
+                        (new bootstrap.Toast(document.getElementById('network_toast'))).show();
+                        break;
+                }
+            }).finally(function(){
+                document.getElementById('user_button').disabled = false;
+                document.getElementById('user_spinner').classList.remove('spinner-border');
+            });
+        }
+    }
+    
+    function changePassword(){
+        if(validateOldPassword() && validateNewPassword()){
+            document.getElementById('password_button').disabled = true;
+            document.getElementById('password_spinner').classList.add('spinner-border');
+            axios.patch('/user/'+uid, {
+                password: {
+                    old: oldPasswordInput.value,
+                    new: newPasswordInput.value
+                }
+            }).then(function(response){
+                (new bootstrap.Toast(document.getElementById('success_toast'))).show();
+                oldPasswordInput.value = '';
+                newPasswordInput.value = '';
+            }).catch(function(error){
+                switch (error.response.status){
+                    case 422:
+                        switch(error.response.data.message){
+                            case 'PASSWORD_INVALID':
+                                newPasswordInput.classList.add('is-invalid');
+                                newPasswordInput.classList.remove('is-valid');
+                                newPasswordFeedback.classList.add('invalid-feedback');
+                                newPasswordFeedback.classList.remove('valid-feedback');
+                                break;
+                            case 'PASSWORD_WRONG':
+                                oldPasswordFeedback.innerHTML = '密码错误：请更正。';
+                                oldPasswordInput.classList.add('is-invalid');
+                                oldPasswordInput.classList.remove('is-valid');
+                                oldPasswordFeedback.classList.add('invalid-feedback');
+                                oldPasswordFeedback.classList.remove('valid-feedback');
+                                break;
+                        }
+                        break;
+                    default:
+                        (new bootstrap.Toast(document.getElementById('network_toast'))).show();
+                        break;
+                }
+            }).finally(function(){
+                document.getElementById('password_button').disabled = false;
+                document.getElementById('password_spinner').classList.remove('spinner-border');
+            });
+        }
+    }
+
+    function initVue(){
+        Vue.createApp({
+            data(){
+                return {
+                    tokens: [],
+                    filtUuid: true
+                }
+            },
+            methods: {
+                uuidFilter(uuid){
+                    if(this.filtUuid){
+                        return uuid.replace(/\-[a-z0-9]+\-[a-z0-9]+\-[a-z0-9]+\-/, '-****-****-****-');
+                    }else{
+                        return uuid;
+                    }
+                },
+                readAll(){
+                    let vue = this;
+                    axios.get('/token', {
+                        params: {uid: uid}
+                    }).then(function(response){
+                        vue.tokens = response.data;
+                    }).catch(function(error){
+                        (new bootstrap.Toast(document.getElementById('network_toast'))).show();
+                    });
+                },
+                deleteOne(index, event){
+                    let vue = this;
+                    event.target.disabled = true;
+                    event.target.children[0].classList.add('spinner-border');
+                    axios.delete('/token/' + vue.tokens[index].uuid).then(function(response){
+                        (new bootstrap.Toast(document.getElementById('success_toast'))).show();
+                        vue.tokens.splice(index, 1);
+                    }).catch(function(error){
+                        switch(error.response.status){
+                            case 404:
+                                vue.tokens.splice(index, 1);
+                                break;
+                            default:
+                                (new bootstrap.Toast(document.getElementById('network_toast'))).show();
+                                break;
+                        }
+                    }).finally(function(){
+                        event.target.disabled = false;
+                        event.target.children[0].classList.remove('spinner-border');
+                    });
+                },
+                deleteAll(event){
+                    let vue = this;
+                    event.target.disabled = true;
+                    event.target.children[0].classList.add('spinner-border');
+                    axios.delete('/token', {
+                        params: {uid, uid}
+                    }).then(function(response){
+                        (new bootstrap.Toast(document.getElementById('success_toast'))).show();
+                        vue.tokens = [];
+                    }).catch(function(error){
+                        (new bootstrap.Toast(document.getElementById('network_toast'))).show();
+                    }).finally(function(){
+                        event.target.disabled = false;
+                        event.target.children[0].classList.remove('spinner-border');
+                    });
+                }
+            },
+            mounted(){
+                this.readAll();
+            }
+        }).mount('#token');
+    }
+</script>
+<?php include 'footer.html'; ?>

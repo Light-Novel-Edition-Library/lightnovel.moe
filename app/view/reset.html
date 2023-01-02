@@ -1,0 +1,218 @@
+<?php include 'header.html'; ?>
+<div class="container">
+    <h1>重置密码</h1>
+    <form id="reset_form" novalidate>
+        <label for="username_input" class="form-label">用户名</label>
+        <input type="text" class="form-control" id="username_input" name="username" required onkeyup="validateUsername()" />
+        <div class="form-text" id="username_feedback">仅支持英文字母、数字和下划线，长度为4至16个字符。</div>
+        <label for="code_input" class="form-label">验证码</label>
+        <div class="row">
+            <div class="col-auto">
+                <input type="number" class="form-control" id="code_input" name="code" maxlength="6" required onkeyup="validateCode()" />
+                <div class="form-text" id="code_feedback">验证码是6位数字。</div>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-outline-primary" type="button" id="sendmail_button" onclick="sendMail()"><span id="sendmail_spinner" class="spinner-border-sm"></span><span id="sendmail_button_text">发送电子邮件</span></button>
+            </div>
+        </div>
+        <label for="password_input" class="form-label">新密码</label>
+        <input type="password" class="form-control" id="password_input" name="password" required onkeyup="validatePassword()" />
+        <div class="form-text" id="password_feedback">长度为6至18个字符。</div>
+        <button type="button" class="btn btn-primary" id="resetpassword_button" onclick="resetPassword()"><span id="resetpassword_spinner" class="spinner-border-sm"></span><span id="resetpassword_button_text">提交</span></button>
+    </form>
+</div>
+<script src="https://www.recaptcha.net/recaptcha/api.js?render=<?php echo env('recaptcha.site_key', ''); ?>"></script>
+<script>
+    var usernameInput = document.getElementById('username_input');
+    var usernameFeedback = document.getElementById('username_feedback');
+    var codeInput = document.getElementById('code_input');
+    var codeFeedback = document.getElementById('code_feedback');
+    var passwordInput = document.getElementById('password_input');
+    var passwordFeedback = document.getElementById('password_feedback');
+    
+    function validateUsername(){
+        var regex = /^[a-zA-Z0-9_]{4,16}$/;
+        usernameFeedback.innerHTML = '仅支持英文字母、数字和下划线，长度为4至16个字符。';
+        if(regex.test(usernameInput.value)){
+            usernameInput.classList.add('is-valid');
+            usernameInput.classList.remove('is-invalid');
+            usernameFeedback.classList.add('valid-feedback');
+            usernameFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            usernameInput.classList.add('is-invalid');
+            usernameInput.classList.remove('is-valid');
+            usernameFeedback.classList.add('invalid-feedback');
+            usernameFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+    
+    function validateCode(){
+        codeFeedback.innerHTML = '验证码是6位数字。';
+        if(codeInput.value.length == 6){
+            codeInput.classList.add('is-valid');
+            codeInput.classList.remove('is-invalid');
+            codeFeedback.classList.add('valid-feedback');
+            codeFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            codeInput.classList.add('is-invalid');
+            codeInput.classList.remove('is-valid');
+            codeFeedback.classList.add('invalid-feedback');
+            codeFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+    
+    function validatePassword(){
+        if(passwordInput.value.length>=6 && passwordInput.value.length<=18){
+            passwordInput.classList.add('is-valid');
+            passwordInput.classList.remove('is-invalid');
+            passwordFeedback.classList.add('valid-feedback');
+            passwordFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            passwordInput.classList.add('is-invalid');
+            passwordInput.classList.remove('is-valid');
+            passwordFeedback.classList.add('invalid-feedback');
+            passwordFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+    
+    function sendMail(){
+        if(validateUsername()){
+            document.getElementById('sendmail_button').disabled = true;
+            document.getElementById('sendmail_spinner').classList.add('spinner-border');
+            grecaptcha.ready(function(){
+                grecaptcha.execute('<?php echo env('recaptcha.site_key', ''); ?>', { action: 'email' }).then(function (token) {
+                    let formData = new FormData();
+                    formData.set('g_token', token);
+                    formData.set('username', usernameInput.value);
+                    axios.post('/user/reset', formData).then(function(response){
+                        switch (response.data){
+                            case 'CODE_MAIL_SENT':
+                                document.getElementById('sendmail_button_text').innerHTML = '请检查收件箱';
+                                break;
+                            case 'MAIL_NOT_SENT':
+                                usernameFeedback.innerHTML = '邮件未发送：服务器内部错误，请向管理人员报告。';
+                                usernameInput.classList.add('is-invalid');
+                                usernameInput.classList.remove('is-valid');
+                                usernameFeedback.classList.add('invalid-feedback');
+                                usernameFeedback.classList.remove('valid-feedback');
+                                document.getElementById('sendmail_button').disabled = false;
+                                break;
+                            case 'EMAIL_NOT_SET':
+                                usernameFeedback.innerHTML = '邮箱未设置：无法重置密码。';
+                                usernameInput.classList.add('is-invalid');
+                                usernameInput.classList.remove('is-valid');
+                                usernameFeedback.classList.add('invalid-feedback');
+                                usernameFeedback.classList.remove('valid-feedback');
+                                document.getElementById('sendmail_button').disabled = false;
+                                break;
+                            case 'USER_NOT_FOUND':
+                                usernameFeedback.innerHTML = '用户不存在。';
+                                usernameInput.classList.add('is-invalid');
+                                usernameInput.classList.remove('is-valid');
+                                usernameFeedback.classList.add('invalid-feedback');
+                                usernameFeedback.classList.remove('valid-feedback');
+                                document.getElementById('sendmail_button').disabled = false;
+                                break;
+                            case 'CAPTCHA_ERROR':
+                                usernameFeedback.innerHTML = '无法通过人机验证：请勿使用自动化程序；如果在正常访问时总是遇到此问题，请向管理人员报告。';
+                                usernameInput.classList.add('is-invalid');
+                                usernameInput.classList.remove('is-valid');
+                                usernameFeedback.classList.add('invalid-feedback');
+                                usernameFeedback.classList.remove('valid-feedback');
+                                document.getElementById('sendmail_button').disabled = false;
+                                break;
+                        }
+                    }).catch(function(error){
+                        usernameFeedback.innerHTML = '网络异常：请尝试重新发送电子邮件。';
+                        usernameInput.classList.add('is-invalid');
+                        usernameInput.classList.remove('is-valid');
+                        usernameFeedback.classList.add('invalid-feedback');
+                        usernameFeedback.classList.remove('valid-feedback');
+                        document.getElementById('sendmail_button').disabled = false;
+                    }).finally(function(){
+                        document.getElementById('sendmail_spinner').classList.remove('spinner-border');
+                    });
+                });
+            });
+        }
+    }
+    
+    function resetPassword(){
+        if(validateCode() && validatePassword()){
+            document.getElementById('resetpassword_button').disabled = true;
+            document.getElementById('resetpassword_spinner').classList.add('spinner-border');
+            grecaptcha.ready(function(){
+                grecaptcha.execute('<?php echo env('recaptcha.site_key', ''); ?>', { action: 'reset' }).then(function (token) {
+                    let formData = new FormData();
+                    formData.set('g_token', token);
+                    formData.set('code', codeInput.value);
+                    formData.set('password', passwordInput.value);
+                    axios.post('/user/reset', formData).then(function(response){
+                        switch (response.data){
+                            case 'PASSWORD_CHANGED':
+                                window.location.href = '/user/login';
+                                break;
+                            case 'CODE_WRONG':
+                                codeFeedback.innerHTML = '验证码错误：请重新输入。';
+                                codeInput.classList.add('is-invalid');
+                                codeInput.classList.remove('is-valid');
+                                codeFeedback.classList.add('invalid-feedback');
+                                codeFeedback.classList.remove('valid-feedback');
+                                document.getElementById('resetpassword_button').disabled = false;
+                                break;
+                            case 'CODE_EXPIRED':
+                                codeFeedback.innerHTML = '验证码已过期：请重新发送电子邮件。';
+                                document.getElementById('sendmail_button_text').innerHTML = '发送电子邮件';
+                                codeInput.classList.add('is-invalid');
+                                codeInput.classList.remove('is-valid');
+                                codeFeedback.classList.add('invalid-feedback');
+                                codeFeedback.classList.remove('valid-feedback');
+                                document.getElementById('sendmail_button').disabled = false;
+                                document.getElementById('resetpassword_button').disabled = false;
+                                break;
+                            case 'CODE_NOT_EXIST':
+                                codeFeedback.innerHTML = '验证码不存在：请先发送电子邮件。';
+                                codeInput.classList.add('is-invalid');
+                                codeInput.classList.remove('is-valid');
+                                codeFeedback.classList.add('invalid-feedback');
+                                codeFeedback.classList.remove('valid-feedback');
+                                document.getElementById('resetpassword_button').disabled = false;
+                                break;
+                            case 'PASSWORD_INVALID':
+                                passwordInput.classList.add('is-invalid');
+                                passwordInput.classList.remove('is-valid');
+                                passwordFeedback.classList.add('invalid-feedback');
+                                passwordFeedback.classList.remove('valid-feedback');
+                                document.getElementById('resetpassword_button').disabled = false;
+                                break;
+                            case 'CAPTCHA_ERROR':
+                                codeFeedback.innerHTML = '无法通过人机验证：请勿使用自动化程序；如果在正常访问时总是遇到此问题，请向管理人员报告。';
+                                codeInput.classList.add('is-invalid');
+                                codeInput.classList.remove('is-valid');
+                                codeFeedback.classList.add('invalid-feedback');
+                                codeFeedback.classList.remove('valid-feedback');
+                                document.getElementById('resetpassword_button').disabled = false;
+                                break;
+                        }
+                    }).catch(function(error){
+                        codeFeedback.innerHTML = '网络异常：请尝试重新提交。';
+                        codeInput.classList.add('is-invalid');
+                        codeInput.classList.remove('is-valid');
+                        codeFeedback.classList.add('invalid-feedback');
+                        codeFeedback.classList.remove('valid-feedback');
+                        document.getElementById('resetpassword_button').disabled = false;
+                    }).finally(function(){
+                        document.getElementById('resetpassword_spinner').classList.remove('spinner-border');
+                    });
+                });
+            });
+        }
+    }
+</script>
+<?php include 'footer.html'; ?>

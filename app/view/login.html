@@ -1,0 +1,92 @@
+<?php include 'header.html'; ?>
+<div class="container">
+    <?php if($captchaInvalid){ ?>
+    <div class="alert alert-danger alert-dismissible fade show">
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <h4 class="alert-heading"><i class="bi bi-x-octagon-fill me-1"></i>无法通过人机验证</h4>
+        <strong>请勿使用自动化程序。</strong>如果在正常登录时总是遇到此问题，请向管理人员报告。
+    </div>
+    <?php } ?>
+    <?php if($passwordWrong){ ?>
+    <div class="alert alert-warning alert-dismissible fade show">
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-1"></i>密码错误</h4>
+        如果您是账号所有者，且设置过电子邮箱，可以尝试“重置密码”。<strong>如果您是新用户，请更换用户名重试。</strong>
+    </div>
+    <?php } ?>
+    <h1>登录/注册</h1>
+    <form id="login_form" method="post" novalidate>
+        <label for="username_input" class="form-label">用户名</label>
+        <input type="text" class="form-control" id="username_input" name="username" required onkeyup="validateUsername()" />
+        <div class="form-text" id="username_feedback">仅支持英文字母、数字和下划线，长度为4至16个字符。</div>
+        <label for="password_input" class="form-label">密码</label>
+        <input type="password" class="form-control" id="password_input" name="password" required onkeyup="validatePassword()" />
+        <div class="form-text" id="password_feedback">长度为6至18个字符。</div>
+        <button type="submit" class="btn btn-primary"><span id="login_spinner" class="spinner-border-sm"></span>提交</button>
+        <button type="button" class="btn btn-light" onclick="window.location.href='/user/reset'">重置密码</button>
+        <input type="checkbox" class="form-check-input" id="remember_input" name="remember" >
+        <label class="form-check-label" for="remember_input">保持登录状态</label>
+        <input type="hidden" name="g_token" id="g_token_input" />
+    </form>
+</div>
+<script src="https://www.recaptcha.net/recaptcha/api.js?render=<?php echo env('recaptcha.site_key', ''); ?>"></script>
+<script>
+    var usernameInput = document.getElementById('username_input');
+    var usernameFeedback = document.getElementById('username_feedback');
+    var passwordInput = document.getElementById('password_input');
+    var passwordFeedback = document.getElementById('password_feedback');
+    
+    function validateUsername(){
+        var regex = /^[a-zA-Z0-9_]{4,16}$/;
+        if(regex.test(usernameInput.value)){
+            usernameInput.classList.add('is-valid');
+            usernameInput.classList.remove('is-invalid');
+            usernameFeedback.classList.add('valid-feedback');
+            usernameFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            usernameInput.classList.add('is-invalid');
+            usernameInput.classList.remove('is-valid');
+            usernameFeedback.classList.add('invalid-feedback');
+            usernameFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+    
+    function validatePassword(){
+        if(passwordInput.value.length>=6 && passwordInput.value.length<=18){
+            passwordInput.classList.add('is-valid');
+            passwordInput.classList.remove('is-invalid');
+            passwordFeedback.classList.add('valid-feedback');
+            passwordFeedback.classList.remove('invalid-feedback');
+            return true;
+        }else{
+            passwordInput.classList.add('is-invalid');
+            passwordInput.classList.remove('is-valid');
+            passwordFeedback.classList.add('invalid-feedback');
+            passwordFeedback.classList.remove('valid-feedback');
+            return false;
+        }
+    }
+    
+    grecaptcha.ready(function() {
+        document.getElementById('login_form').addEventListener("submit", function(event) {
+            event.preventDefault();
+            if(validateUsername() && validatePassword()){
+                document.getElementById('login_spinner').classList.add('spinner-border');
+                grecaptcha.execute('<?php echo env('recaptcha.site_key', ''); ?>', { action: 'login' }).then(function (token) {
+                    document.getElementById("g_token_input").value = token;
+                    document.getElementById('login_form').submit();
+                });
+            }
+        }, false);
+    });
+    
+    <?php if($userInvalid){ ?>
+    usernameInput.classList.add('is-invalid');
+    usernameFeedback.classList.add('invalid-feedback');
+    passwordInput.classList.add('is-invalid');
+    passwordFeedback.classList.add('invalid-feedback');
+    <?php } ?>
+</script>
+<?php include 'footer.html'; ?>
