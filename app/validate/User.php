@@ -18,7 +18,7 @@ class User extends Validate
         'password' => 'require|length:6,18',
         'email' => 'email|max:128',
         'nickname' => 'max:32',
-        'bio' => 'max:255'
+        'bio' => 'max:300'
     ];
 
     /**
