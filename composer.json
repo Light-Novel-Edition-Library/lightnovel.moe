@@ -25,7 +25,8 @@
         "topthink/think-orm": "^2.0",
         "topthink/think-filesystem": "^1.0",
         "phpmailer/phpmailer": "^6.7",
-        "ramsey/uuid": "^4.7"
+        "ramsey/uuid": "^4.7",
+        "geoip2/geoip2": "^2.13"
     },
     "require-dev": {
         "symfony/var-dumper": "^4.2",

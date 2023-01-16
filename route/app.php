@@ -10,6 +10,7 @@
 // +----------------------------------------------------------------------
 use think\facade\Route;
 use think\facade\Db;
+use lightnovel\Tool;
 
 Route::rule('/', function(){
     return view('home', ['title' => '首页']);
@@ -33,7 +34,7 @@ Route::group('user', function(){
             'title' => '用户资料',
             'email' => $users[0]['email'],
             'bio' => $users[0]['bio'],
-            'register_time' => $users[0]['register_time']
+            'register_time' => Tool::formatClientTime($users[0]['register_time'])
         ]);
     })->middleware('guard');
     

@@ -23,7 +23,7 @@ class Guard
                 return redirect('/user/login?from='.request()->baseUrl());
             }
         }
-        
+
         return $next($request);
     }
 }

@@ -3,6 +3,7 @@ namespace app\controller;
 
 use app\BaseController;
 use think\facade\Db;
+use lightnovel\Tool;
 
 class Token extends BaseController{
     public function readAll(){
@@ -12,6 +13,9 @@ class Token extends BaseController{
             return json(['message' => 'FORBIDDEN'], 403);
         }
         $tokens = Db::query('SELECT uid, uuid, login_ip, user_agent, login_time FROM ln_tokens WHERE uid=:uid', ['uid' => input('get.uid')]);
+        foreach($tokens as $key => $value){
+            $tokens[$key]['login_time'] = Tool::formatClientTime($tokens[$key]['login_time']);
+        }
         return json($tokens, 200);
     }
     
