@@ -40,6 +40,16 @@
 
 5. 关闭维护模式，启用生产模式：将`/public/.htaccess.production`文件的全部内容覆盖到生产环境的`/public/.htaccess`文件。如果是在开发环境，还应该将`.env`文件的`APP_DEBUG`配置项设为`true`。
 
+## 更新日志
+
+### 1.0 Alpha
+
+- 使用 ThinkPHP 6.0 构建了轻版馆主站，目前只有用户注册和登录、登出功能。
+
+### 0.1 Alpha
+
+- 使用原生PHP构建了轻版馆主站的首个版本。
+
 ThinkPHP 6.0
 ===============
 
